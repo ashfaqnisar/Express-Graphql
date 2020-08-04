@@ -1,20 +1,9 @@
 import express from 'express';
 import path from 'path';
+const { ApolloServer, gql } = require('apollo-server-express');
 import morgan from 'morgan';
-import { graphqlHTTP } from 'express-graphql';
-import { buildSchema } from 'graphql';
 import cors from 'cors';
-
 const debug = require('debug')('app:app');
-
-const schema = buildSchema(`
-  type Query {
-    hello: String
-  }
-`);
-
-const root = { hello: () => 'Hello world!' };
-
 require('dotenv').config(); //For env variables
 
 const app = express();
@@ -25,17 +14,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(
-  '/',
-  graphqlHTTP({
-    schema: schema,
-    rootValue: root,
-    graphiql: true
-  })
-);
+const typeDefs = gql`
+  type Query {
+    hello: String
+  }
+`;
 
-const listener = app.listen(process.env.PORT || 8080 || 8500, function () {
-  console.log('Listening on port ' + listener.address().port);
-});
+const resolvers = {
+  Query: {
+    hello: () => 'Hello World'
+  }
+};
+
+const server = new ApolloServer({ typeDefs, resolvers });
+server.applyMiddleware({ app });
+
+const port = process.env.PORT || 8080 || 8500;
+app.listen({ port: port }, () =>
+  console.log(`Now browse to http://localhost:${port}` + server.graphqlPath)
+);
 
 export default app;
